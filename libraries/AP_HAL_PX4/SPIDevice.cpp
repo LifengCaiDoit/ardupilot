@@ -64,10 +64,10 @@ SPIDesc SPIDeviceManager::device_table[] = {
 
 #ifdef PX4_SPI_BUS_EXT
 #ifdef PX4_SPIDEV_EXT0
-    SPIDesc("external0m0",    PX4_SPI_BUS_EXT, (spi_dev_e)PX4_SPIDEV_EXT0, SPIDEV_MODE0, 1*MHZ, 1*MHZ),
-    SPIDesc("external0m1",    PX4_SPI_BUS_EXT, (spi_dev_e)PX4_SPIDEV_EXT0, SPIDEV_MODE1, 1*MHZ, 1*MHZ),
-    SPIDesc("external0m2",    PX4_SPI_BUS_EXT, (spi_dev_e)PX4_SPIDEV_EXT0, SPIDEV_MODE2, 1*MHZ, 1*MHZ),
-    SPIDesc("external0m3",    PX4_SPI_BUS_EXT, (spi_dev_e)PX4_SPIDEV_EXT0, SPIDEV_MODE3, 1*MHZ, 1*MHZ),
+    SPIDesc("external0m0",    PX4_SPI_BUS_EXT, (spi_dev_e)PX4_SPIDEV_EXT0, SPIDEV_MODE0, 2*MHZ, 2*MHZ),
+    SPIDesc("external0m1",    PX4_SPI_BUS_EXT, (spi_dev_e)PX4_SPIDEV_EXT0, SPIDEV_MODE1, 2*MHZ, 2*MHZ),
+    SPIDesc("external0m2",    PX4_SPI_BUS_EXT, (spi_dev_e)PX4_SPIDEV_EXT0, SPIDEV_MODE2, 2*MHZ, 2*MHZ),
+    SPIDesc("external0m3",    PX4_SPI_BUS_EXT, (spi_dev_e)PX4_SPIDEV_EXT0, SPIDEV_MODE3, 2*MHZ, 2*MHZ),
 #endif
 #ifdef PX4_SPIDEV_EXT1
     SPIDesc("external1",    PX4_SPI_BUS_EXT, (spi_dev_e)PX4_SPIDEV_EXT1, SPIDEV_MODE3, 2*MHZ, 2*MHZ),

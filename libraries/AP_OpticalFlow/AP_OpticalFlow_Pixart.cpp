@@ -117,7 +117,7 @@ void AP_OpticalFlow_Pixart::init(void)
 
     _dev->get_semaphore()->give();
 
-    _dev->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&AP_OpticalFlow_Pixart::timer, bool));
+    _dev->register_periodic_callback(2000, FUNCTOR_BIND_MEMBER(&AP_OpticalFlow_Pixart::timer, bool));
 }
 
 // update - read latest values from sensor and fill in x,y and totals.
@@ -129,6 +129,7 @@ void AP_OpticalFlow_Pixart::update(void)
 void AP_OpticalFlow_Pixart::reg_write(uint8_t reg, uint8_t value)
 {
     _dev->write_register(reg | PIXART_WRITE_FLAG, value);
+    hal.scheduler->delay_microseconds(120);
 }
 
 // read from an 8 bit register
@@ -140,6 +141,7 @@ uint8_t AP_OpticalFlow_Pixart::reg_read(uint8_t reg)
     hal.scheduler->delay_microseconds(PIXART_Tsrad);
     _dev->transfer(nullptr, 0, &v, 1);
     _dev->set_chip_select(false);
+    hal.scheduler->delay_microseconds(120);
     return v;
 }
 
@@ -182,7 +184,7 @@ void AP_OpticalFlow_Pixart::srom_download(void)
     if (!_dev->set_chip_select(false)) {
         printf("Failed to force CS off\n");
     }
-    hal.scheduler->delay(1);
+    hal.scheduler->delay_microseconds(160);
 
     uint8_t id = reg_read(PIXART_REG_SROM_ID);
     if (id != srom_id) {
@@ -208,19 +210,43 @@ void AP_OpticalFlow_Pixart::load_configuration(void)
     }
 }
 
+
+void AP_OpticalFlow_Pixart::motion_burst(void)
+{
+    uint8_t *b = (uint8_t *)&burst;
+
+    memset(b, 0, sizeof(burst));
+    
+    _dev->set_chip_select(true);
+    uint8_t reg = PIXART_REG_MOT_BURST;
+
+    _dev->transfer(&reg, 1, nullptr, 0);
+    hal.scheduler->delay_microseconds(150);
+
+    for (uint8_t i=0; i<sizeof(burst); i++) {
+        _dev->transfer(nullptr, 0, &b[i], 1);
+        if (i == 0 && (burst.motion & 0x80) == 0) {
+            // no motion, save some bus bandwidth
+            _dev->set_chip_select(false);
+            return;
+        }
+    }
+    _dev->set_chip_select(false);
+}
+
 bool AP_OpticalFlow_Pixart::timer(void)
 {
-    uint8_t motion = reg_read(PIXART_REG_MOTION);
-    if ((motion & 0x80) == 0) {
-        // no motion
+    if (AP_HAL::micros() - last_burst_us < 500) {
         return true;
     }
-    int16_t mot_x = reg_read16s(PIXART_REG_DELTA_X_L);
-    int16_t mot_y = reg_read16s(PIXART_REG_DELTA_Y_L);
-    sum_x += mot_x;
-    sum_y += mot_y;
+    motion_burst();
+    last_burst_us = AP_HAL::micros();
+    
+    sum_x += burst.delta_x;
+    sum_y += burst.delta_y;
+
     uint32_t now = AP_HAL::millis();
-    if (now - last_print_ms >= 100) {
+    if (now - last_print_ms >= 100 && (sum_x != 0 || sum_y != 0)) {
         last_print_ms = now;
         printf("Motion: %d %d\n", (int)sum_x, (int)sum_y);
         sum_x = sum_y = 0;

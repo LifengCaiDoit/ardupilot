@@ -22,6 +22,19 @@ private:
         uint8_t reg;
         uint8_t value;
     };
+
+    struct PACKED MotionBurst {
+        uint8_t motion;
+        uint8_t observation;
+        int16_t delta_x;
+        int16_t delta_y;
+        uint8_t squal;
+        uint8_t rawdata_sum;
+        uint8_t max_raw;
+        uint8_t min_raw;
+        uint8_t shutter_upper;
+        uint8_t shutter_lower;
+    } burst;
     
     static const uint8_t srom_data[];
     static const uint8_t srom_id;
@@ -36,8 +49,10 @@ private:
     void load_configuration(void);
 
     bool timer(void);
+    void motion_burst(void);
 
     int32_t sum_x;
     int32_t sum_y;
     uint32_t last_print_ms;
+    uint32_t last_burst_us;
 };

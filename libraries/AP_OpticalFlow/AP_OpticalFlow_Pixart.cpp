@@ -215,7 +215,8 @@ void AP_OpticalFlow_Pixart::motion_burst(void)
 {
     uint8_t *b = (uint8_t *)&burst;
 
-    memset(b, 0, sizeof(burst));
+    burst.delta_x = 0;
+    burst.delta_y = 0;
     
     _dev->set_chip_select(true);
     uint8_t reg = PIXART_REG_MOT_BURST;
@@ -248,7 +249,9 @@ bool AP_OpticalFlow_Pixart::timer(void)
     uint32_t now = AP_HAL::millis();
     if (now - last_print_ms >= 100 && (sum_x != 0 || sum_y != 0)) {
         last_print_ms = now;
-        printf("Motion: %d %d\n", (int)sum_x, (int)sum_y);
+        printf("Motion: %d %d obs:0x%02x squal:%u rds:%u maxr:%u minr:%u sup:%u slow:%u\n",
+               (int)sum_x, (int)sum_y, (unsigned)burst.squal, (unsigned)burst.rawdata_sum, (unsigned)burst.max_raw,
+               (unsigned)burst.max_raw, (unsigned)burst.min_raw, (unsigned)burst.shutter_upper, (unsigned)burst.shutter_lower);
         sum_x = sum_y = 0;
     }
     return true;

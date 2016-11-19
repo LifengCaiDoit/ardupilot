@@ -76,33 +76,62 @@ extern const AP_HAL::HAL& hal;
 // constructor
 AP_OpticalFlow_Pixart::AP_OpticalFlow_Pixart(OpticalFlow &_frontend) :
 OpticalFlow_backend(_frontend)
-{}
-
-
-// initialise the device
-void AP_OpticalFlow_Pixart::init(void)
 {
-    printf("Pixart init\n");
-    
     _dev = std::move(hal.spi->get_device("external0m3"));
-    if (!_dev) {
-        AP_HAL::panic("Bus for pixart not found");
-    }
+}
 
+
+// detect the device
+AP_OpticalFlow_Pixart *AP_OpticalFlow_Pixart::detect(OpticalFlow &_frontend)
+{
+    AP_OpticalFlow_Pixart *sensor = new AP_OpticalFlow_Pixart(_frontend);
+    if (!sensor) {
+        return nullptr;
+    }
+    if (!sensor->setup_sensor()) {
+        delete sensor;
+        return nullptr;
+    }
+    return sensor;
+}
+
+// setup the device
+bool AP_OpticalFlow_Pixart::setup_sensor(void)
+{
     if (!_dev->get_semaphore()->take(0)) {
         AP_HAL::panic("Unable to get bus semaphore");
     }
+
+    uint8_t id;
+    uint16_t crc;
 
     // power-up sequence
     reg_write(PIXART_REG_POWER_RST, 0x5A);
     hal.scheduler->delay(50);
 
-    for (uint8_t reg=PIXART_REG_MOTION; reg <= PIXART_REG_DELTA_Y_H; reg++) {
-        uint8_t v = reg_read(reg);
-        printf("reg[%02x]=%02x\n", reg, v);
+    // check product ID
+    if (reg_read(PIXART_REG_PRODUCT_ID) != 0x3F ||
+        reg_read(PIXART_REG_INV_PROD_ID) != 0xC0) {
+        goto failed;
+    }
+    
+    srom_download();
+
+    id = reg_read(PIXART_REG_SROM_ID);
+    if (id != srom_id) {
+        printf("Pixart: bad SROM ID: 0x%02x\n", id);
+        goto failed;
     }
 
-    srom_download();
+    reg_write(PIXART_REG_SROM_EN, 0x15);
+    hal.scheduler->delay(10);
+    
+    crc = reg_read16u(PIXART_REG_DOUT_L);
+    if (crc != 0xBEEF) {
+        printf("Pixart: bad SROM CRC: 0x%04x\n", crc);
+        goto failed;
+    }
+    
     load_configuration();
 
     hal.scheduler->delay(50);
@@ -118,6 +147,11 @@ void AP_OpticalFlow_Pixart::init(void)
     _dev->get_semaphore()->give();
 
     _dev->register_periodic_callback(2000, FUNCTOR_BIND_MEMBER(&AP_OpticalFlow_Pixart::timer, bool));
+    return true;
+
+failed:
+    _dev->get_semaphore()->give();
+    return false;
 }
 
 // update - read latest values from sensor and fill in x,y and totals.
@@ -185,22 +219,6 @@ void AP_OpticalFlow_Pixart::srom_download(void)
         printf("Failed to force CS off\n");
     }
     hal.scheduler->delay_microseconds(160);
-
-    uint8_t id = reg_read(PIXART_REG_SROM_ID);
-    if (id != srom_id) {
-        printf("Bad SROM ID: 0x%02x\n", id);
-    }
-
-    printf("Verifying\n");
-    reg_write(PIXART_REG_SROM_EN, 0x15);
-    hal.scheduler->delay(10);
-
-    uint16_t crc = reg_read16u(PIXART_REG_DOUT_L);
-    if (crc != PIXART_SROM_CRC_RESULT) {
-        printf("CRC Fail: 0x%04x\n", (unsigned)crc);
-    } else {
-        printf("CRC OK\n");
-    }
 }
 
 void AP_OpticalFlow_Pixart::load_configuration(void)

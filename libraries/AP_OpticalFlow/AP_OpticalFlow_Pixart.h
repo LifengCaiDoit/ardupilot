@@ -10,10 +10,13 @@ public:
     AP_OpticalFlow_Pixart(OpticalFlow &_frontend);
 
     // init - initialise the sensor
-    void init();
+    void init() override {}
 
     // update - read latest values from sensor and fill in x,y and totals.
-    void update(void);
+    void update(void) override;
+
+    // detect if the sensor is available
+    static AP_OpticalFlow_Pixart *detect(OpticalFlow &_frontend);
 
 private:
     AP_HAL::OwnPtr<AP_HAL::SPIDevice> _dev;
@@ -40,6 +43,9 @@ private:
     static const uint8_t srom_id;
     static const RegData init_data[];
 
+    // setup sensor
+    bool setup_sensor(void);
+    
     void reg_write(uint8_t reg, uint8_t value);
     uint8_t reg_read(uint8_t reg);
     int16_t reg_read16s(uint8_t reg);

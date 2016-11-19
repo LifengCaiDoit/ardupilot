@@ -76,6 +76,7 @@ public:
     }
 
 private:
+    AP_AHRS_NavEKF &_ahrs;
     OpticalFlow_backend *backend;
 
     struct AP_OpticalFlow_Flags {

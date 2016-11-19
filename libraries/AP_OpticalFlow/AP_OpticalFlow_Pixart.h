@@ -69,4 +69,5 @@ private:
     int32_t sum_y;
     uint32_t last_print_ms;
     uint32_t last_burst_us;
+    uint32_t last_update_ms;
 };

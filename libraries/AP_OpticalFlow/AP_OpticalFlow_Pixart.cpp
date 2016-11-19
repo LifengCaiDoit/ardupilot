@@ -293,6 +293,12 @@ bool AP_OpticalFlow_Pixart::timer(void)
 // update - read latest values from sensor and fill in x,y and totals.
 void AP_OpticalFlow_Pixart::update(void)
 {
+    uint32_t now = AP_HAL::millis();
+    if (now - last_update_ms < 100) {
+        return;
+    }
+    last_update_ms = now;
+    
     struct OpticalFlow::OpticalFlow_state state;
     state.device_id = 1;
     state.surface_quality = burst.squal;
